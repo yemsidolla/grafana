@@ -1,4 +1,4 @@
-c#!/bin/bash
+#!/bin/bash
 
 # Observability Stack Deployment Script
 # Usage: ./deploy.sh [central|agent] [start|stop|restart|status]
@@ -37,6 +37,67 @@ check_docker() {
     fi
 }
 
+# Function to create directories and set permissions for central server
+setup_central_directories() {
+    print_status "Setting up central server directories and permissions..."
+    
+    # Create data directories
+    local dirs=(
+        "grafana-data"
+        "prometheus-data"
+        "loki-data"
+        "alloy-data"
+    )
+    
+    for dir in "${dirs[@]}"; do
+        if [ ! -d "$dir" ]; then
+            print_status "Creating directory: $dir"
+            mkdir -p "$dir"
+        fi
+        
+        # Set proper permissions (readable/writable by Docker)
+        print_status "Setting permissions for: $dir"
+        chmod 755 "$dir"
+        
+        # Ensure ownership is correct for Docker
+        if command -v docker >/dev/null 2>&1; then
+            # Try to set ownership to current user (Docker will handle permissions)
+            chown $(id -u):$(id -g) "$dir" 2>/dev/null || true
+        fi
+    done
+    
+    print_success "Central server directories setup complete!"
+}
+
+# Function to create directories and set permissions for remote agents
+setup_agent_directories() {
+    print_status "Setting up remote agent directories and permissions..."
+    
+    # Create log directories that might be mounted
+    local dirs=(
+        "logs"
+        "var/log"
+    )
+    
+    for dir in "${dirs[@]}"; do
+        if [ ! -d "$dir" ]; then
+            print_status "Creating directory: $dir"
+            mkdir -p "$dir"
+        fi
+        
+        # Set proper permissions for log directories
+        print_status "Setting permissions for: $dir"
+        chmod 755 "$dir"
+        
+        # Ensure ownership is correct
+        if command -v docker >/dev/null 2>&1; then
+            chown $(id -u):$(id -g) "$dir" 2>/dev/null || true
+        fi
+    done
+    
+    print_success "Remote agent directories setup complete!"
+}
+
 # Function to deploy central server
 deploy_central() {
     local action=$1
@@ -55,6 +116,8 @@ deploy_central() {
     
     case $action in
         "start")
+            print_status "Setting up directories and permissions..."
+            setup_central_directories
             print_status "Starting central server services..."
             docker-compose up -d
             print_success "Central server started successfully!"
@@ -112,6 +175,8 @@ deploy_agent() {
     
     case $action in
         "start")
+            print_status "Setting up directories and permissions..."
+            setup_agent_directories
             print_status "Starting remote agent services..."
             docker-compose up -d
             print_success "Remote agent started successfully!"

@@ -3,7 +3,8 @@
 # Environment files
 .env
 *.env
-env.example
+# Keep env.example files as templates
+# env.example
 
 # Docker volumes and data
 *-data/
