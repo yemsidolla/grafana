@@ -1,10 +1,33 @@
-echo "# grafana" >> README.md
+# Quick Git Cheat
+
+## Initialize a new git repository
+```bash
 git init
-git add README.md
-git commit -m "first commit"
+```
+## Add all files to staging
+```bash
+git add .
+```
+
+## Commit with a message
+```bash
+git commit -m "Initial commit"
+```
+
+## Set the main branch name (optional, for new repos)
+```bash
 git branch -M main
+```
+
+## Add remote origin (replace with your repo URL)
+```bash
 git remote add origin git@github.com:yemsidolla/grafana.git
+```
+
+## Push to remote main branch
+```bash
 git push -u origin main
+```
 
 # Observability Stack with Grafana Alloy
 
