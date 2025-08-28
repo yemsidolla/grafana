@@ -101,6 +101,36 @@ setup_central_directories() {
         print_success "Grafana permissions configured!"
     fi
     
+    # Special handling for Loki data directory
+    if [ -d "loki-data" ]; then
+        print_status "Setting up Loki-specific permissions..."
+        
+        # Create required subdirectories for Loki
+        local loki_subdirs=(
+            "loki-data/rules"
+            "loki-data/chunks"
+            "loki-data/wal"
+        )
+        
+        for subdir in "${loki_subdirs[@]}"; do
+            if [ ! -d "$subdir" ]; then
+                print_status "Creating Loki subdirectory: $subdir"
+                mkdir -p "$subdir"
+            fi
+        done
+        
+        # Set permissions for Loki (needs to be writable by container)
+        print_status "Setting Loki permissions..."
+        chmod -R 777 loki-data/
+        
+        # Set ownership to ensure Docker can write
+        if command -v docker >/dev/null 2>&1; then
+            chown -R $(id -u):$(id -g) loki-data/ 2>/dev/null || true
+        fi
+        
+        print_success "Loki permissions configured!"
+    fi
+    
     print_success "Central server directories setup complete!"
 }
 
