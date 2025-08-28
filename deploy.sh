@@ -66,6 +66,41 @@ setup_central_directories() {
         fi
     done
     
+    # Special handling for Grafana data directory (Grafana 5.1+ requirements)
+    if [ -d "grafana-data" ]; then
+        print_status "Setting up Grafana-specific permissions..."
+        
+        # Create required subdirectories
+        local grafana_subdirs=(
+            "grafana-data/plugins"
+            "grafana-data/logs"
+            "grafana-data/data"
+        )
+        
+        for subdir in "${grafana_subdirs[@]}"; do
+            if [ ! -d "$subdir" ]; then
+                print_status "Creating Grafana subdirectory: $subdir"
+                mkdir -p "$subdir"
+            fi
+        done
+        
+        # Set permissions for Grafana (needs to be writable by container user)
+        print_status "Setting Grafana permissions..."
+        chmod -R 777 grafana-data/
+        
+        # Set ownership to Grafana user (472:472) if possible
+        if command -v docker >/dev/null 2>&1; then
+            # Try to set ownership to Grafana user (472:472)
+            chown -R 472:472 grafana-data/ 2>/dev/null || {
+                print_warning "Could not set ownership to Grafana user (472:472)"
+                print_warning "Setting ownership to current user instead"
+                chown -R $(id -u):$(id -g) grafana-data/ 2>/dev/null || true
+            }
+        fi
+        
+        print_success "Grafana permissions configured!"
+    fi
+    
     print_success "Central server directories setup complete!"
 }
 

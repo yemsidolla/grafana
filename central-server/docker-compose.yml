@@ -81,8 +81,12 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-admin}
       - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-http://localhost:3000}
+      - GF_PATHS_DATA=/var/lib/grafana
+      - GF_PATHS_LOGS=/var/lib/grafana/logs
+      - GF_PATHS_PLUGINS=/var/lib/grafana/plugins
     volumes:
       - ./grafana-data:/var/lib/grafana
+    user: "${GRAFANA_USER:-472}:${GRAFANA_GROUP:-472}"
     networks:
       - observability
     depends_on:
