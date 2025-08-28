@@ -67,14 +67,22 @@ This directory contains lightweight monitoring agents that collect data and send
 ### Environment Variables
 - `CENTRAL_SERVER_IP`: IP address of central observability server
 - `CENTRAL_SERVER_HOSTNAME`: Hostname of central server
+- `GRAFANA_URL`: Full URL to Grafana (e.g., http://192.168.1.100:3000)
+- `LOKI_URL`: Full URL to Loki (e.g., http://192.168.1.100:3100)
 - `HOSTNAME`: Unique identifier for this agent
 
 ### Network Configuration
-Update `promtail-config.yml`:
+The configuration automatically uses environment variables:
 ```yaml
 clients:
-  - url: http://CENTRAL_SERVER_IP:3100/loki/api/v1/push
+  - url: ${LOKI_URL:-http://central-server:3100}/loki/api/v1/push
 ```
+
+### Benefits of URL-based Configuration
+- ✅ **Flexible**: Grafana and Loki can be on different servers
+- ✅ **Port Independent**: Easy to change ports without editing config files
+- ✅ **Environment Specific**: Different URLs for dev/staging/prod
+- ✅ **Load Balancer Support**: Can point to load balancer URLs
 
 ## 🔧 Maintenance
 

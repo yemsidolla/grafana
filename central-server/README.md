@@ -59,6 +59,10 @@ This directory contains the central observability stack that collects and proces
 - `GF_SECURITY_ADMIN_PASSWORD`: Grafana admin password
 - `CENTRAL_SERVER_IP`: Your server's IP address
 - `CENTRAL_SERVER_HOSTNAME`: Your server's hostname
+- `GRAFANA_URL`: Full URL to Grafana (e.g., http://localhost:3000)
+- `LOKI_URL`: Full URL to Loki (e.g., http://localhost:3100)
+- `PROMETHEUS_URL`: Full URL to Prometheus (e.g., http://localhost:9090)
+- `REMOTE_AGENT_1`, `REMOTE_AGENT_2`, etc.: IP addresses of remote agents
 
 ### Agent Configuration
 Update `alloy-config.yml` with your actual agent details:
@@ -66,6 +70,12 @@ Update `alloy-config.yml` with your actual agent details:
 {"__address__" = "agent1:9100", "job" = "node-exporter", "instance" = "agent1"},
 {"__address__" = "agent2:9100", "job" = "node-exporter", "instance" = "agent2"},
 ```
+
+### URL-based Configuration Benefits
+- ✅ **Service Separation**: Grafana and Loki can be on different servers
+- ✅ **Load Balancing**: Can point to load balancer URLs
+- ✅ **Environment Flexibility**: Easy to switch between dev/staging/prod
+- ✅ **Port Independence**: Change ports without editing config files
 
 ## 🔧 Maintenance
 

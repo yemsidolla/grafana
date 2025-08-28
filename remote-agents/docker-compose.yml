@@ -48,6 +48,10 @@ services:
     image: grafana/promtail:latest
     container_name: promtail
     restart: always
+    environment:
+      - LOKI_URL=${LOKI_URL:-http://central-server:3100}
+      - GRAFANA_URL=${GRAFANA_URL:-http://central-server:3000}
+      - HOSTNAME=${HOSTNAME:-unknown}
     volumes:
       - ./promtail-config.yml:/etc/promtail/config.yml
       - /var/log:/var/log:ro
