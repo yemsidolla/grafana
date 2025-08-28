@@ -131,6 +131,22 @@ setup_central_directories() {
         print_success "Loki permissions configured!"
     fi
     
+    # Special handling for Prometheus data directory
+    if [ -d "prometheus-data" ]; then
+        print_status "Setting up Prometheus-specific permissions..."
+        
+        # Set permissions for Prometheus (needs to be writable by container)
+        print_status "Setting Prometheus permissions..."
+        chmod -R 777 prometheus-data/
+        
+        # Set ownership to ensure Docker can write
+        if command -v docker >/dev/null 2>&1; then
+            chown -R $(id -u):$(id -g) prometheus-data/ 2>/dev/null || true
+        fi
+        
+        print_success "Prometheus permissions configured!"
+    fi
+    
     print_success "Central server directories setup complete!"
 }
 
