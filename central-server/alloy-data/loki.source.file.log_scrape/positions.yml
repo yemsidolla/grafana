@@ -1,0 +1,10 @@
+positions:
+  ? path: /var/log/alternatives.log
+    labels: '{job="system"}'
+  : "4682"
+  ? path: /var/log/bootstrap.log
+    labels: '{job="system"}'
+  : "61237"
+  ? path: /var/log/dpkg.log
+    labels: '{job="system"}'
+  : "181102"
