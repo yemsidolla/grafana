@@ -13,7 +13,7 @@ prometheus.exporter.unix "local_system" {
 
 // Container metrics exporter
 prometheus.exporter.cadvisor "containers" {
-  host = "unix:///var/run/docker.sock"
+  docker_socket = "/var/run/docker.sock"
 }
 
 // Scrape local system metrics
@@ -58,7 +58,7 @@ prometheus.relabel "filter_metrics" {
     action        = "replace"
     source_labels = ["__address__"]
     target_label  = "instance"
-    replacement   = "${HOSTNAME:-unknown}"
+    replacement   = "remote-agent"
   }
 
   forward_to = [prometheus.remote_write.prometheus_service.receiver]
@@ -67,7 +67,7 @@ prometheus.relabel "filter_metrics" {
 // Write metrics to central Prometheus
 prometheus.remote_write "prometheus_service" {
   endpoint {
-    url = "${PROMETHEUS_URL:-http://central-server:9090}/api/v1/write"
+    url = "http://central-server:9090/api/v1/write"
   }
 }
 
@@ -101,7 +101,7 @@ loki.process "filter_logs" {
   
   stage.labels {
     values = {
-      instance = "${HOSTNAME:-unknown}",
+      instance = "remote-agent",
       job = "system",
     }
   }
@@ -112,7 +112,7 @@ loki.process "filter_logs" {
 // Write logs to central Loki
 loki.write "loki_service" {
   endpoint {
-    url = "${LOKI_URL:-http://central-server:3100}/loki/api/v1/push"
+    url = "http://central-server:3100/loki/api/v1/push"
   }
 }
 
@@ -130,7 +130,7 @@ loki.source.docker "container_logs" {
 loki.process "add_labels" {
   stage.labels {
     values = {
-      instance = "${HOSTNAME:-unknown}",
+      instance = "remote-agent",
       job = "docker",
     }
   }
