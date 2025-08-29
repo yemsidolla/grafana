@@ -13,7 +13,7 @@ prometheus.exporter.unix "local_system" {
 
 // Container metrics exporter
 prometheus.exporter.cadvisor "containers" {
-  docker_socket = "/var/run/docker.sock"
+  docker_endpoint = "unix:///var/run/docker.sock"
 }
 
 // Scrape local system metrics
