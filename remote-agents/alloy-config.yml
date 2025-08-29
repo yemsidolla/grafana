@@ -1,5 +1,5 @@
-// Grafana Alloy Configuration - Central Server
-// Collects and forwards data to Loki and Prometheus from remote agents
+// Grafana Alloy Configuration - Remote Agent
+// Collects metrics and logs, forwards to central server
 
 // =============================================================================
 // PROMETHEUS METRICS COLLECTION AND FORWARDING
@@ -7,8 +7,13 @@
 
 // System metrics exporter (local)
 prometheus.exporter.unix "local_system" {
-  procfs_path = "/proc"
-  sysfs_path = "/sys"
+  procfs_path = "/host/proc"
+  sysfs_path = "/host/sys"
+}
+
+// Container metrics exporter
+prometheus.exporter.cadvisor "containers" {
+  host = "unix:///var/run/docker.sock"
 }
 
 // Scrape local system metrics
@@ -18,12 +23,19 @@ prometheus.scrape "local_system_metrics" {
   scrape_interval = "15s"
 }
 
+// Scrape container metrics
+prometheus.scrape "container_metrics" {
+  targets         = prometheus.exporter.cadvisor.containers.targets
+  forward_to      = [prometheus.relabel.filter_metrics.receiver]
+  scrape_interval = "15s"
+}
+
 // Filter and relabel metrics
 prometheus.relabel "filter_metrics" {
   rule {
     action        = "keep"
     source_labels = ["__name__"]
-    regex         = "(node_.*|process_.*|go_.*)"
+    regex         = "(node_.*|container_.*|process_.*|go_.*)"
   }
   
   rule {
@@ -34,26 +46,29 @@ prometheus.relabel "filter_metrics" {
     replacement   = "system"
   }
 
+  rule {
+    action        = "replace"
+    source_labels = ["__name__"]
+    target_label  = "metric_type"
+    regex         = "container_(.+)"
+    replacement   = "container"
+  }
+
+  rule {
+    action        = "replace"
+    source_labels = ["__address__"]
+    target_label  = "instance"
+    replacement   = "${HOSTNAME:-unknown}"
+  }
+
   forward_to = [prometheus.remote_write.prometheus_service.receiver]
 }
 
-// Write metrics to Prometheus
+// Write metrics to central Prometheus
 prometheus.remote_write "prometheus_service" {
   endpoint {
-    url = "http://prometheus:9090/api/v1/write"
+    url = "${PROMETHEUS_URL:-http://central-server:9090}/api/v1/write"
   }
-}
-
-// Scrape remote agents
-prometheus.scrape "remote_agents" {
-  targets = [
-    // Remote agents - replace with actual IPs/hostnames from environment
-    // Example: {"__address__" = "AGENT1_IP:9100", "job" = "node-exporter", "instance" = "agent1"},
-    // Example: {"__address__" = "AGENT1_IP:8080", "job" = "cadvisor", "instance" = "agent1"},
-    // Add more agents as needed
-  ]
-  forward_to = [prometheus.remote_write.prometheus_service.receiver]
-  scrape_interval = "15s"
 }
 
 // =============================================================================
@@ -83,13 +98,21 @@ loki.process "filter_logs" {
     expression  = ".*Connection closed by authenticating user root"
     drop_counter_reason = "noisy"
   }
+  
+  stage.labels {
+    values = {
+      instance = "${HOSTNAME:-unknown}",
+      job = "system"
+    }
+  }
+  
   forward_to = [loki.write.loki_service.receiver]
 }
 
-// Write logs to Loki
+// Write logs to central Loki
 loki.write "loki_service" {
   endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
+    url = "${LOKI_URL:-http://central-server:3100}/loki/api/v1/push"
   }
 }
 
@@ -99,5 +122,18 @@ loki.source.docker "container_logs" {
   targets = [
     {__path__ = "/var/lib/docker/containers/*/*-json.log", job = "docker"},
   ]
+  
+  forward_to = [loki.process.add_labels.receiver]
+}
+
+// Add labels to container logs
+loki.process "add_labels" {
+  stage.labels {
+    values = {
+      instance = "${HOSTNAME:-unknown}",
+      job = "docker"
+    }
+  }
+  
   forward_to = [loki.write.loki_service.receiver]
 }

@@ -15,18 +15,12 @@ This directory contains the central observability stack that collects and proces
          │                       │                       │
          └───────────────────────┼───────────────────────┘
                                  │
-                    ┌─────────────────┐
-                    │  Grafana Alloy  │
-                    │  (Port 12345)   │
-                    │                 │
-                    │ Central Data    │
-                    │ Collector       │
-                    └─────────────────┘
-                                 ▲
+                                 │ (Receives data from agents)
                                  │
                     ┌─────────────────┐
                     │  Remote Agents  │
                     │  (Multiple)     │
+                    │  (Alloy-based)  │
                     └─────────────────┘
 ```
 
@@ -51,7 +45,6 @@ This directory contains the central observability stack that collects and proces
 - **Grafana UI**: http://localhost:3000 (admin/admin)
 - **Prometheus UI**: http://localhost:9090
 - **Loki API**: http://localhost:3100
-- **Alloy UI**: http://localhost:12345
 
 ## ⚙️ Configuration
 
@@ -62,14 +55,6 @@ This directory contains the central observability stack that collects and proces
 - `GRAFANA_URL`: Full URL to Grafana (e.g., http://localhost:3000)
 - `LOKI_URL`: Full URL to Loki (e.g., http://localhost:3100)
 - `PROMETHEUS_URL`: Full URL to Prometheus (e.g., http://localhost:9090)
-- `REMOTE_AGENT_1`, `REMOTE_AGENT_2`, etc.: IP addresses of remote agents
-
-### Agent Configuration
-Update `alloy-config.yml` with your actual agent details:
-```alloy
-{"__address__" = "agent1:9100", "job" = "node-exporter", "instance" = "agent1"},
-{"__address__" = "agent2:9100", "job" = "node-exporter", "instance" = "agent2"},
-```
 
 ### URL-based Configuration Benefits
 - ✅ **Service Separation**: Grafana and Loki can be on different servers
@@ -86,6 +71,5 @@ Update `alloy-config.yml` with your actual agent details:
 ## 📁 Files
 
 - `docker-compose.yml`: Service orchestration
-- `alloy-config.yml`: Alloy data collection configuration
 - `prometheus.yml`: Prometheus scrape configuration
 - `env.example`: Environment variables template

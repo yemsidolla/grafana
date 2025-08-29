@@ -46,7 +46,6 @@ setup_central_directories() {
         "grafana-data"
         "prometheus-data"
         "loki-data"
-        "alloy-data"
     )
     
     for dir in "${dirs[@]}"; do
@@ -154,27 +153,20 @@ setup_central_directories() {
 setup_agent_directories() {
     print_status "Setting up remote agent directories and permissions..."
     
-    # Create log directories that might be mounted
-    local dirs=(
-        "logs"
-        "var/log"
-    )
+    # Create Alloy data directory
+    if [ ! -d "alloy-data" ]; then
+        print_status "Creating directory: alloy-data"
+        mkdir -p "alloy-data"
+    fi
     
-    for dir in "${dirs[@]}"; do
-        if [ ! -d "$dir" ]; then
-            print_status "Creating directory: $dir"
-            mkdir -p "$dir"
-        fi
-        
-        # Set proper permissions for log directories
-        print_status "Setting permissions for: $dir"
-        chmod 755 "$dir"
-        
-        # Ensure ownership is correct
-        if command -v docker >/dev/null 2>&1; then
-            chown $(id -u):$(id -g) "$dir" 2>/dev/null || true
-        fi
-    done
+    # Set proper permissions for Alloy data directory
+    print_status "Setting permissions for: alloy-data"
+    chmod 755 "alloy-data"
+    
+    # Ensure ownership is correct
+    if command -v docker >/dev/null 2>&1; then
+        chown $(id -u):$(id -g) "alloy-data" 2>/dev/null || true
+    fi
     
     print_success "Remote agent directories setup complete!"
 }
@@ -206,7 +198,6 @@ deploy_central() {
             echo "  - Grafana: http://localhost:3000 (admin/admin)"
             echo "  - Prometheus: http://localhost:9090"
             echo "  - Loki: http://localhost:3100"
-            echo "  - Alloy: http://localhost:12345"
             ;;
         "stop")
             print_status "Stopping central server services..."
@@ -227,7 +218,6 @@ deploy_central() {
             echo "  - Grafana: http://localhost:3000"
             echo "  - Prometheus: http://localhost:9090"
             echo "  - Loki: http://localhost:3100"
-            echo "  - Alloy: http://localhost:12345"
             ;;
         *)
             print_error "Invalid action. Use: start, stop, restart, or status"
@@ -262,8 +252,7 @@ deploy_agent() {
             docker-compose up -d
             print_success "Remote agent started successfully!"
             print_status "Agent endpoints:"
-            echo "  - Node Exporter: http://localhost:19100"
-            echo "  - cAdvisor: http://localhost:18080"
+            echo "  - Alloy UI: http://localhost:12345"
             ;;
         "stop")
             print_status "Stopping remote agent services..."
@@ -281,8 +270,7 @@ deploy_agent() {
             docker-compose ps
             echo ""
             print_status "Agent endpoints:"
-            echo "  - Node Exporter: http://localhost:19100"
-            echo "  - cAdvisor: http://localhost:18080"
+            echo "  - Alloy UI: http://localhost:12345"
             ;;
         *)
             print_error "Invalid action. Use: start, stop, restart, or status"

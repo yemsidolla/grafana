@@ -1,32 +1,4 @@
 services:
-  # Grafana Alloy - Central Data Collection and Forwarding
-  grafana-alloy:
-    image: grafana/alloy:latest
-    container_name: grafana-alloy
-    restart: always
-    ports:
-      - "${ALLOY_PORT:-12345}:12345"
-    volumes:
-      - ./alloy-config.yml:/etc/alloy/config.alloy
-      - ./alloy-data:/var/lib/alloy
-    environment:
-      - ALLOY_CONFIG_FILE=/etc/alloy/config.alloy
-      - ALLOY_DISABLE_TRACES=true
-    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy", "/etc/alloy/config.alloy"]
-    networks:
-      - observability
-    depends_on:
-      - prometheus
-      - loki
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-          cpus: '1.0'
-        reservations:
-          memory: 1G
-          cpus: '0.5'
-
   # Prometheus - Metrics Storage
   prometheus:
     image: prom/prometheus:latest
@@ -105,8 +77,6 @@ networks:
 
 volumes:
   grafana_data:
-    driver: local
-  alloy_data:
     driver: local
   prometheus_data:
     driver: local

@@ -1,6 +1,6 @@
 # Remote Monitoring Agents
 
-This directory contains lightweight monitoring agents that collect data and send it to the central observability server.
+This directory contains Grafana Alloy agents that collect metrics and logs from remote servers and forward them to the central observability server.
 
 ## 🏗️ Architecture
 
@@ -8,24 +8,26 @@ This directory contains lightweight monitoring agents that collect data and send
 ┌─────────────────────────────────────────────────────────────────┐
 │                    REMOTE AGENT                                 │
 │                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│  │ Node Exporter│  │  cAdvisor   │  │  Promtail   │            │
-│  │ (Metrics)   │  │ (Container) │  │   (Logs)    │            │
-│  └─────────────┘  └─────────────┘  └─────────────┘            │
-│           │               │               │                   │
-│           └───────────────┼───────────────┘                   │
-│                           │                                   │
 │                ┌─────────────────┐                            │
-│                │   Agent Side    │                            │
-│                │   (No Alloy)    │                            │
+│                │  Grafana Alloy  │                            │
+│                │  (Port 12345)   │                            │
+│                │                 │                            │
+│                │ Collects:       │                            │
+│                │ • System metrics│                            │
+│                │ • Container     │                            │
+│                │   metrics       │                            │
+│                │ • System logs   │                            │
+│                │ • Container     │                            │
+│                │   logs          │                            │
 │                └─────────────────┘                            │
 └─────────────────────────────────────────────────────────────────┘
                            │
-                           │ (Sends data to central server)
+                           │ (Pushes data to central server)
                            │
                 ┌─────────────────┐
                 │  Central Server │
-                │  (Alloy + etc.) │
+                │  (Prometheus +  │
+                │   Loki + etc.)  │
                 └─────────────────┘
 ```
 
@@ -38,73 +40,81 @@ This directory contains lightweight monitoring agents that collect data and send
 
 2. **Update configuration:**
    - Edit `.env` with your central server details
-   - Update `promtail-config.yml` with central server IP/hostname
+   - Update URLs for Prometheus and Loki
 
-3. **Start the agents:**
+3. **Start the agent:**
    ```bash
    docker-compose up -d
    ```
 
-## 📊 Services
+## 📊 What Alloy Collects
 
-### Node Exporter (Port 19100)
-- Collects host metrics (CPU, memory, disk, network)
-- Exposes metrics on `/metrics` endpoint
-- Central server scrapes these metrics
+### Metrics (Forwarded to Prometheus)
+- **System Metrics**: CPU, memory, disk, network (via `prometheus.exporter.unix`)
+- **Container Metrics**: Docker container stats (via `prometheus.exporter.cadvisor`)
+- **Process Metrics**: System process information
 
-### cAdvisor (Port 18080)
-- Collects container metrics
-- Monitors Docker containers
-- Exposes metrics on `/metrics` endpoint
-
-### Promtail
-- Collects system and container logs
-- Sends logs to central Loki server
-- No exposed ports (internal only)
+### Logs (Forwarded to Loki)
+- **System Logs**: `/var/log/*.log`, `/var/log/syslog`, `/var/log/auth.log`
+- **Container Logs**: Docker container logs via Docker socket
+- **Filtered**: Removes noisy logs automatically
 
 ## ⚙️ Configuration
 
 ### Environment Variables
+- `ALLOY_PORT`: Port for Alloy UI (default: 12345)
 - `CENTRAL_SERVER_IP`: IP address of central observability server
 - `CENTRAL_SERVER_HOSTNAME`: Hostname of central server
-- `GRAFANA_URL`: Full URL to Grafana (e.g., http://192.168.1.100:3000)
+- `PROMETHEUS_URL`: Full URL to Prometheus (e.g., http://192.168.1.100:9090)
 - `LOKI_URL`: Full URL to Loki (e.g., http://192.168.1.100:3100)
+- `GRAFANA_URL`: Full URL to Grafana (e.g., http://192.168.1.100:3000)
 - `HOSTNAME`: Unique identifier for this agent
 
-### Network Configuration
-The configuration automatically uses environment variables:
-```yaml
-clients:
-  - url: ${LOKI_URL:-http://central-server:3100}/loki/api/v1/push
-```
-
-### Benefits of URL-based Configuration
-- ✅ **Flexible**: Grafana and Loki can be on different servers
-- ✅ **Port Independent**: Easy to change ports without editing config files
-- ✅ **Environment Specific**: Different URLs for dev/staging/prod
-- ✅ **Load Balancer Support**: Can point to load balancer URLs
+### Alloy Configuration
+The `alloy-config.yml` file configures:
+- **Metrics Collection**: System and container metrics
+- **Log Collection**: System and Docker logs
+- **Data Forwarding**: To central Prometheus and Loki
+- **Labeling**: Adds instance labels for identification
 
 ## 🔧 Maintenance
 
-- **View logs**: `docker-compose logs -f [service]`
-- **Restart services**: `docker-compose restart [service]`
+- **View logs**: `docker-compose logs -f grafana-alloy`
+- **Restart agent**: `docker-compose restart grafana-alloy`
 - **Check status**: `docker-compose ps`
+- **Access Alloy UI**: http://localhost:12345
 
 ## 📁 Files
 
 - `docker-compose.yml`: Agent service orchestration
-- `promtail-config.yml`: Log collection configuration
+- `alloy-config.yml`: Alloy data collection and forwarding configuration
 - `env.example`: Environment variables template
 
 ## 🌐 Network Requirements
 
 - **Outbound**: Agent must be able to reach central server
-- **Inbound**: Central server must be able to reach agent ports
-- **Ports**: 19100 (Node Exporter), 18080 (cAdvisor)
+- **Prometheus**: Agent pushes metrics to central Prometheus
+- **Loki**: Agent pushes logs to central Loki
+- **Port**: 12345 (Alloy UI, optional)
 
 ## 🔄 Deployment
 
 1. Copy this directory to each remote server
-2. Update configuration for each agent
-3. Start services on each agent
-4. Update central server configuration with agent details
+2. Update `.env` with central server details
+3. Start the agent: `docker-compose up -d`
+
+## 🎯 Benefits of Alloy-based Agents
+
+- ✅ **Unified Collection**: Single agent for metrics and logs
+- ✅ **Efficient**: Built-in filtering and processing
+- ✅ **Reliable**: Automatic retry and buffering
+- ✅ **Flexible**: Easy to configure and extend
+- ✅ **Resource Efficient**: Lower overhead than multiple exporters
+- ✅ **Push-based**: No need for central server to scrape agents
+
+## 📈 Scaling
+
+- **Add Agents**: Copy directory to new servers
+- **No Central Changes**: Agents push data directly
+- **Load Distribution**: Each agent handles its own data collection
+- **Fault Tolerance**: Agents continue working if central server is down

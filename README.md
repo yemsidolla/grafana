@@ -46,35 +46,30 @@ A complete observability solution using Grafana Alloy as a data collector and fo
 │           │               ▲               ▲                   │
 │           └───────────────┼───────────────┘                   │
 │                           │                                   │
-│                ┌─────────────────┐                            │
-│                │  Grafana Alloy  │                            │
-│                │  (Port 12345)   │                            │
-│                │                 │                            │
-│                │ Scrapes remote  │                            │
-│                │ agents &        │                            │
-│                │ forwards data   │                            │
-│                └─────────────────┘                            │
-│                           ▲                                   │
+│                           │ (Receives data from agents)       │
+│                           │                                   │
 └───────────────────────────┼───────────────────────────────────┘
                             │
-                            │ (Scrapes metrics from agents)
                             │
 ┌───────────────────────────┼───────────────────────────────────┐
 │                    REMOTE AGENTS                              │
 │                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│  │ Node Exporter│  │  cAdvisor   │  │  Promtail   │            │
-│  │ (Port 19100) │  │ (Port 18080) │  │   (Logs)    │            │
-│  └─────────────┘  └─────────────┘  └─────────────┘            │
-│           │               │               │                   │
-│           │               │               └───► Loki           │
-│           │               │                   (Central)       │
-│           └───────────────┼─────────────────┘                   │
-│                           │                                   │
 │                ┌─────────────────┐                            │
-│                │   Agent Side    │                            │
-│                │   (No Alloy)    │                            │
+│                │  Grafana Alloy  │                            │
+│                │  (Port 12345)   │                            │
+│                │                 │                            │
+│                │ Collects &      │                            │
+│                │ forwards:       │                            │
+│                │ • System metrics│                            │
+│                │ • Container     │                            │
+│                │   metrics       │                            │
+│                │ • System logs   │                            │
+│                │ • Container     │                            │
+│                │   logs          │                            │
 │                └─────────────────┘                            │
+│                           │                                   │
+│                           └───► Prometheus & Loki             │
+│                               (Central)                       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -84,13 +79,12 @@ A complete observability solution using Grafana Alloy as a data collector and fo
 grafana/
 ├── central-server/          # Central observability stack
 │   ├── docker-compose.yml   # Central services orchestration
-│   ├── alloy-config.yml     # Alloy scraping & forwarding config
 │   ├── prometheus.yml       # Prometheus scrape config
 │   ├── env.example          # Environment variables template
 │   └── README.md            # Central server documentation
-├── remote-agents/           # Lightweight monitoring agents
-│   ├── docker-compose.yml   # Agent services orchestration
-│   ├── promtail-config.yml  # Log collection & forwarding config
+├── remote-agents/           # Alloy-based monitoring agents
+│   ├── docker-compose.yml   # Agent service orchestration
+│   ├── alloy-config.yml     # Alloy data collection & forwarding config
 │   ├── env.example          # Environment variables template
 │   └── README.md            # Remote agents documentation
 ├── deploy.sh                # Easy deployment script
@@ -152,40 +146,37 @@ Use the deployment script for easier management:
 - **Grafana UI**: http://localhost:3000 (admin/admin)
 - **Prometheus UI**: http://localhost:9090
 - **Loki API**: http://localhost:3100
-- **Alloy UI**: http://localhost:12345
 
 ### Remote Agents
-- **Node Exporter**: http://agent-ip:19100
-- **cAdvisor**: http://agent-ip:18080
+- **Alloy UI**: http://agent-ip:12345
 
 ## 🎯 Key Features
 
-- **Centralized Data Collection**: Alloy scrapes metrics from multiple agents
-- **Dual Data Flow**: Metrics via Alloy → Prometheus, Logs via Promtail → Loki
+- **Unified Agent Architecture**: Alloy on every agent collects metrics and logs
+- **Push-based Data Flow**: Agents push data directly to Prometheus and Loki
 - **Scalable Architecture**: Add agents without central server changes
-- **Resource Efficient**: Lightweight agents, powerful central processing
+- **Resource Efficient**: Single agent per server, lower overhead
 - **Complete Observability**: Metrics, logs, and visualization
 - **Production Ready**: Proper networking, security, and monitoring
 
 ## 🔧 Configuration
 
 ### Central Server
-- **Grafana Alloy**: Scrapes metrics from remote agents and forwards to Prometheus
-- **Prometheus**: Stores and queries metrics (receives from Alloy)
-- **Loki**: Stores and queries logs (receives from Promtail)
+- **Prometheus**: Stores and queries metrics (receives from remote Alloy agents)
+- **Loki**: Stores and queries logs (receives from remote Alloy agents)
 - **Grafana**: Visualization and dashboards for both metrics and logs
 
 ### Remote Agents
-- **Node Exporter**: Exposes host metrics on port 19100
-- **cAdvisor**: Exposes container metrics on port 18080
-- **Promtail**: Collects logs and forwards directly to central Loki
+- **Grafana Alloy**: Collects system metrics, container metrics, and logs
+- **Data Forwarding**: Pushes metrics to Prometheus, logs to Loki
+- **Self-contained**: Single agent handles all data collection
 
 ## 🌐 Network Requirements
 
-- **Central Server**: Exposes ports for web UI and agent communication
-- **Remote Agents**: Expose metrics ports (19100, 18080) for Alloy scraping
-- **Promtail**: Sends logs directly to central Loki (port 3100)
-- **Firewall**: Allow communication between central server and agents
+- **Central Server**: Exposes ports for web UI and data reception
+- **Remote Agents**: Push data to central Prometheus and Loki
+- **Data Flow**: Agents → Prometheus (port 9090), Agents → Loki (port 3100)
+- **Firewall**: Allow outbound connections from agents to central server
 
 ## 📈 Scaling
 
