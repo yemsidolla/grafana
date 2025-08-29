@@ -102,7 +102,7 @@ loki.process "filter_logs" {
   stage.labels {
     values = {
       instance = "${HOSTNAME:-unknown}",
-      job = "system"
+      job = "system",
     }
   }
   
@@ -131,7 +131,7 @@ loki.process "add_labels" {
   stage.labels {
     values = {
       instance = "${HOSTNAME:-unknown}",
-      job = "docker"
+      job = "docker",
     }
   }
   
