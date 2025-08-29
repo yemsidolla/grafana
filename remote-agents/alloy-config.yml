@@ -11,21 +11,9 @@ prometheus.exporter.unix "local_system" {
   sysfs_path = "/host/sys"
 }
 
-// Container metrics exporter
-prometheus.exporter.cadvisor "containers" {
-  docker_endpoint = "unix:///var/run/docker.sock"
-}
-
 // Scrape local system metrics
 prometheus.scrape "local_system_metrics" {
   targets         = prometheus.exporter.unix.local_system.targets
-  forward_to      = [prometheus.relabel.filter_metrics.receiver]
-  scrape_interval = "15s"
-}
-
-// Scrape container metrics
-prometheus.scrape "container_metrics" {
-  targets         = prometheus.exporter.cadvisor.containers.targets
   forward_to      = [prometheus.relabel.filter_metrics.receiver]
   scrape_interval = "15s"
 }
@@ -35,7 +23,7 @@ prometheus.relabel "filter_metrics" {
   rule {
     action        = "keep"
     source_labels = ["__name__"]
-    regex         = "(node_.*|container_.*|process_.*|go_.*)"
+    regex         = "(node_.*|process_.*|go_.*)"
   }
   
   rule {
@@ -48,17 +36,9 @@ prometheus.relabel "filter_metrics" {
 
   rule {
     action        = "replace"
-    source_labels = ["__name__"]
-    target_label  = "metric_type"
-    regex         = "container_(.+)"
-    replacement   = "container"
-  }
-
-  rule {
-    action        = "replace"
     source_labels = ["__address__"]
     target_label  = "instance"
-    replacement   = "remote-agent"
+    replacement   = env("HOSTNAME")
   }
 
   forward_to = [prometheus.remote_write.prometheus_service.receiver]
@@ -67,7 +47,7 @@ prometheus.relabel "filter_metrics" {
 // Write metrics to central Prometheus
 prometheus.remote_write "prometheus_service" {
   endpoint {
-    url = "http://central-server:9090/api/v1/write"
+    url = env("PROMETHEUS_URL") + "/api/v1/write"
   }
 }
 
@@ -101,7 +81,7 @@ loki.process "filter_logs" {
   
   stage.labels {
     values = {
-      instance = "remote-agent",
+      instance = env("HOSTNAME"),
       job = "system",
     }
   }
@@ -112,7 +92,7 @@ loki.process "filter_logs" {
 // Write logs to central Loki
 loki.write "loki_service" {
   endpoint {
-    url = "http://central-server:3100/loki/api/v1/push"
+    url = env("LOKI_URL") + "/loki/api/v1/push"
   }
 }
 
@@ -130,7 +110,7 @@ loki.source.docker "container_logs" {
 loki.process "add_labels" {
   stage.labels {
     values = {
-      instance = "remote-agent",
+      instance = env("HOSTNAME"),
       job = "docker",
     }
   }
