@@ -1,5 +1,5 @@
-// Grafana Alloy Configuration - Remote Agent
-// Collects metrics and logs, forwards to central server
+// Grafana Alloy Configuration - Central Server
+// Collects and forwards data to Loki and Prometheus from remote agents
 
 // =============================================================================
 // PROMETHEUS METRICS COLLECTION AND FORWARDING
@@ -7,8 +7,8 @@
 
 // System metrics exporter (local)
 prometheus.exporter.unix "local_system" {
-  procfs_path = "/host/proc"
-  sysfs_path = "/host/sys"
+  procfs_path = "/proc"
+  sysfs_path = "/sys"
 }
 
 // Scrape local system metrics
@@ -34,22 +34,18 @@ prometheus.relabel "filter_metrics" {
     replacement   = "system"
   }
 
-  rule {
-    action        = "replace"
-    source_labels = ["__address__"]
-    target_label  = "instance"
-    replacement   = env("HOSTNAME")
-  }
-
   forward_to = [prometheus.remote_write.prometheus_service.receiver]
 }
 
-// Write metrics to central Prometheus
+// Write metrics to Prometheus
 prometheus.remote_write "prometheus_service" {
   endpoint {
-    url = env("PROMETHEUS_URL") + "/api/v1/write"
+    url = "http://prometheus:9090/api/v1/write"
   }
 }
+
+// Remote agents now push data directly to Prometheus and Loki
+// No need to scrape them - they use remote_write and loki.write
 
 // =============================================================================
 // LOKI LOG COLLECTION AND FORWARDING
@@ -78,54 +74,22 @@ loki.process "filter_logs" {
     expression  = ".*Connection closed by authenticating user root"
     drop_counter_reason = "noisy"
   }
-  
-  stage.labels {
-    values = {
-      instance = env("HOSTNAME"),
-      job = "system",
-    }
-  }
-  
   forward_to = [loki.write.loki_service.receiver]
 }
 
-// Write logs to central Loki
+// Write logs to Loki
 loki.write "loki_service" {
   endpoint {
-    url = env("LOKI_URL") + "/loki/api/v1/push"
+    url = "http://loki:3100/loki/api/v1/push"
   }
 }
 
 // Collect Docker container logs
 loki.source.docker "container_logs" {
-  host       = "unix:///var/run/docker.sock"
-  targets    = []
-  forward_to = [loki.process.add_labels.receiver]
-  
-  relabel_rules {
-    source_labels = ["__meta_docker_container_name"]
-    target_label  = "container"
-  }
-  
-  relabel_rules {
-    source_labels = ["__meta_docker_container_id"]
-    target_label  = "container_id"
-  }
-  
-  relabel_rules {
-    source_labels = ["__meta_docker_container_log_stream"]
-    target_label  = "stream"
-  }
-}
-
-// Add labels to container logs
-loki.process "add_labels" {
-  stage.labels {
-    values = {
-      instance = env("HOSTNAME"),
-      job = "docker",
-    }
-  }
-  
+  host = "unix:///var/run/docker.sock"
+  targets = [
+    {__path__ = "/var/lib/docker/containers/*/*-json.log", job = "docker"},
+  ]
   forward_to = [loki.write.loki_service.receiver]
 }
+
