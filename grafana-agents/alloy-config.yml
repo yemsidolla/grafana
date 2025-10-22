@@ -4,33 +4,114 @@
 // This configuration runs on each Docker host to collect:
 // 1. Docker container logs with clear hostname identification
 // 2. System logs with clear hostname identification
-// 3. Forward all data to central Grafana Loki server
+// 3. Container metrics via cAdvisor
+// 4. Forward all data to central Grafana Loki and Prometheus servers
 //
 // USAGE:
 // 1. Deploy this agent on each Docker host you want to monitor
 // 2. Set HOSTNAME environment variable to unique host identifier
-// 3. Set LOKI_URL to point to central server
-// 4. Agent will automatically discover and monitor all Docker containers
+// 3. Set LOKI_URL to point to central Loki server
+// 4. Set PROMETHEUS_URL to point to central Prometheus server
+// 5. Agent will automatically discover and monitor all Docker containers
 //
 // ENVIRONMENT VARIABLES REQUIRED:
 // - HOSTNAME: Unique identifier for this host (e.g., "web-server-01")
 // - LOKI_URL: Central Loki endpoint (e.g., "http://central-server:3100")
+// - PROMETHEUS_URL: Central Prometheus endpoint (e.g., "http://central-server:9090")
 // =============================================================================
+
+
+
+
+
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+constants {
+  hostname = env("HOSTNAME")
+}
+
+
+
+
+
+
+// =============================================================================
+// METRICS CONFIGURATION
+// =============================================================================
+// Collects container metrics via cAdvisor and forwards to Prometheus
+
+// Host cAdvisor on the Docker socket to expose container metrics
+prometheus.exporter.cadvisor "cadvisor" {
+  docker_only = true
+}
+
+// Relabel cAdvisor targets with proper job and instance labels
+discovery.relabel "cadvisor_targets" {
+  targets = prometheus.exporter.cadvisor.cadvisor.targets
+
+  rule {
+    target_label = "job"
+    replacement  = "integrations/docker"
+  }
+
+  rule {
+    target_label = "instance"
+    replacement  = constants.hostname
+  }
+}
+
+// Configure a prometheus.scrape component to collect cAdvisor metrics
+prometheus.scrape "cadvisor_scraper" {
+  targets    = discovery.relabel.cadvisor_targets.output
+  forward_to = [prometheus.remote_write.prometheus_output.receiver]
+  scrape_interval = "10s"
+}
+
+// Configure a prometheus.remote_write component to send metrics to Prometheus server
+prometheus.remote_write "prometheus_output" {
+  endpoint {
+    url = env("PROMETHEUS_URL") + "/api/v1/write"
+  }
+}
+
+
+
+
+
 
 // =============================================================================
 // DOCKER CONTAINER LOG COLLECTION
 // =============================================================================
 // Collects Docker container logs with docker_by_host label for easy filtering
 
-// Discover Docker containers automatically
+// Discover Docker containers and extract metadata
 discovery.docker "docker_discovery" {
   host = "unix:///var/run/docker.sock"
 }
 
+// Define a relabeling rule to create a service name from the container name
+discovery.relabel "logs_integrations_docker" {
+  targets = discovery.docker.docker_discovery.targets
+  
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex = "/(.*)"
+    target_label = "container_name"
+  }
+
+  rule {
+    target_label = "instance"
+    replacement  = constants.hostname
+  }
+}
+
 // Collect Docker container logs
 loki.source.docker "docker_logs" {
-  host    = "unix:///var/run/docker.sock"
-  targets = discovery.docker.docker_discovery.targets
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.docker_discovery.targets
+  relabel_rules = discovery.relabel.logs_integrations_docker.rules
   forward_to = [loki.process.docker_processor.receiver]
 }
 
