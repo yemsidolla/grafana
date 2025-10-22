@@ -42,7 +42,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
     volumes:
-      - grafana_data:/var/lib/grafana
+      - ./grafana_data:/var/lib/grafana
       - ./datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
     networks:
       - monitoring
