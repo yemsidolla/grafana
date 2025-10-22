@@ -31,10 +31,6 @@ discovery.docker "docker_discovery" {
 loki.source.docker "docker_logs" {
   host    = "unix:///var/run/docker.sock"
   targets = discovery.docker.docker_discovery.targets
-  
-  // Only collect logs from now onwards (avoid old log replay)
-  since = "1h"
-  
   forward_to = [loki.process.docker_processor.receiver]
 }
 
