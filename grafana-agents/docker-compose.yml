@@ -23,5 +23,4 @@ services:
 
 networks:
   monitoring:
-    name: observability
-    external: true
+    name: monitoring
