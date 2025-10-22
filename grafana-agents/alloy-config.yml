@@ -32,13 +32,26 @@ loki.source.docker "docker_logs" {
   host    = "unix:///var/run/docker.sock"
   targets = discovery.docker.docker_discovery.targets
   
-  // Optional: label container info
-  labels = {
-    container = "{{ .Name }}",
-    image     = "{{ .Image }}",
-  }
+  // Only collect logs from now onwards (avoid old log replay)
+  since = "1h"
+  
+  // Extract container metadata using relabel rules
+  relabel_rules = [
+    {
+      source_labels = ["__meta_docker_container_name"]
+      target_label  = "container"
+    },
+    {
+      source_labels = ["__meta_docker_container_image"]
+      target_label  = "image"
+    },
+    {
+      source_labels = ["__meta_docker_container_log_stream"]
+      target_label  = "stream"
+    }
+  ]
+  
   forward_to = [loki.process.docker_processor.receiver]
-
 }
 
 // Process Docker logs with host identification and log level detection
