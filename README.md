@@ -1,210 +1,154 @@
-# Quick Git Cheat
+# Grafana Central - Multi-Host Monitoring with Grafana
 
-## Initialize a new git repository
-```bash
-git init
-```
-## Add all files to staging
-```bash
-git add .
-```
+Centralized monitoring solution using Grafana, Loki, Prometheus, and Alloy agents for monitoring Docker containers across multiple hosts.
 
-## Commit with a message
-```bash
-git commit -m "Initial commit"
-```
+## 🏗️ Architecture
 
-## Set the main branch name (optional, for new repos)
-```bash
-git branch -M main
-```
-
-## Add remote origin (replace with your repo URL)
-```bash
-git remote add origin git@github.com:yemsidolla/grafana.git
-```
-
-## Push to remote main branch
-```bash
-git push -u origin main
-```
-
-# Observability Stack with Grafana Alloy
-
-A complete observability solution using Grafana Alloy as a data collector and forwarder, with separate deployments for central server and remote agents.
-
-## 🏗️ Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CENTRAL OBSERVABILITY STACK                  │
-│                                                                 │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│  │   Grafana   │  │ Prometheus  │  │    Loki     │            │
-│  │   (Port 3000)│  │  (Port 9090) │  │  (Port 3100) │            │
-│  └─────────────┘  └─────────────┘  └─────────────┘            │
-│           │               ▲               ▲                   │
-│           └───────────────┼───────────────┘                   │
-│                           │                                   │
-│                           │ (Receives data from agents)       │
-│                           │                                   │
-└───────────────────────────┼───────────────────────────────────┘
-                            │
-                            │
-┌───────────────────────────┼───────────────────────────────────┐
-│                    REMOTE AGENTS                              │
-│                                                                 │
-│                ┌─────────────────┐                            │
-│                │  Grafana Alloy  │                            │
-│                │  (Port 12345)   │                            │
-│                │                 │                            │
-│                │ Collects &      │                            │
-│                │ forwards:       │                            │
-│                │ • System metrics│                            │
-│                │ • Container     │                            │
-│                │   metrics       │                            │
-│                │ • System logs   │                            │
-│                │ • Container     │                            │
-│                │   logs          │                            │
-│                └─────────────────┘                            │
-│                           │                                   │
-│                           └───► Prometheus & Loki             │
-│                               (Central)                       │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## 📁 Project Structure
-
-```
-grafana/
-├── central-server/          # Central observability stack
-│   ├── docker-compose.yml   # Central services orchestration
-│   ├── prometheus.yml       # Prometheus scrape config
-│   ├── env.example          # Environment variables template
-│   └── README.md            # Central server documentation
-├── remote-agents/           # Alloy-based monitoring agents
-│   ├── docker-compose.yml   # Agent service orchestration
-│   ├── alloy-config.yml     # Alloy data collection & forwarding config
-│   ├── env.example          # Environment variables template
-│   └── README.md            # Remote agents documentation
-├── deploy.sh                # Easy deployment script
-└── README.md                # This file
-```
+- **Grafana Central**: Central monitoring server (Grafana + Loki + Prometheus)
+- **Alloy Agents**: Lightweight agents deployed on each Docker host for data collection
 
 ## 🚀 Quick Start
 
-### 1. Deploy Central Server
+### 1. Deploy Grafana Central
 
 ```bash
-cd central-server
-cp env.example .env
-# Edit .env with your network details
+cd grafana-central
 docker-compose up -d
 ```
 
-### 2. Deploy Remote Agents
+**Access:**
+- Grafana: http://localhost:3000 (admin/admin)
+- Prometheus: http://localhost:9090
+- Loki: http://localhost:3100
+
+### 2. Deploy Alloy Agents
+
+On each Docker host you want to monitor:
 
 ```bash
-cd remote-agents
-cp env.example .env
-# Edit .env with central server details
+cd grafana-agents
+# Set unique hostname for this agent
+export HOSTNAME=web-server-01
 docker-compose up -d
 ```
 
-### 3. Configure Agent Discovery
+## 📊 Using Grafana
 
-Update `central-server/alloy-config.yml` with actual agent IPs/hostnames.
+### Log Queries
 
-## 🚀 Easy Deployment (Alternative)
-
-Use the deployment script for easier management:
-
-```bash
-# Deploy Central Server
-./deploy.sh central start
-
-# Deploy Remote Agent
-./deploy.sh agent start
-
-# Check Status
-./deploy.sh central status
-./deploy.sh agent status
-./deploy.sh all status
-
-# Stop services
-./deploy.sh central stop
-./deploy.sh agent stop
-
-# Restart services
-./deploy.sh central restart
-./deploy.sh agent restart
+**All Docker Logs:**
+```logql
+{job="docker"}
 ```
 
-## 📊 Access Points
+**Logs by Host:**
+```logql
+{job="docker", host="web-server-01"}
+```
 
-### Central Server
-- **Grafana UI**: http://localhost:3000 (admin/admin)
-- **Prometheus UI**: http://localhost:9090
-- **Loki API**: http://localhost:3100
+**Error Logs:**
+```logql
+{job="docker", stream="stderr"}
+```
 
-### Remote Agents
-- **Alloy UI**: http://agent-ip:12345
+**Search for Content:**
+```logql
+{job="docker"} |= "error"
+{job="docker"} |= "failed"
+```
 
-## 🎯 Key Features
+### Metrics Queries
 
-- **Unified Agent Architecture**: Alloy on every agent collects metrics and logs
-- **Push-based Data Flow**: Agents push data directly to Prometheus and Loki
-- **Scalable Architecture**: Add agents without central server changes
-- **Resource Efficient**: Single agent per server, lower overhead
-- **Complete Observability**: Metrics, logs, and visualization
-- **Production Ready**: Proper networking, security, and monitoring
+**Container Count by Host:**
+```promql
+sum by (host) (count_over_time({job="docker"}[5m]))
+```
 
 ## 🔧 Configuration
 
-### Central Server
-- **Prometheus**: Stores and queries metrics (receives from remote Alloy agents)
-- **Loki**: Stores and queries logs (receives from remote Alloy agents)
-- **Grafana**: Visualization and dashboards for both metrics and logs
+### Grafana Central
+- `docker-compose.yml` - Main services (Grafana + Loki + Prometheus)
+- `datasources.yml` - Auto-configure Grafana datasources
+- `prometheus.yml` - Prometheus configuration
 
-### Remote Agents
-- **Grafana Alloy**: Collects system metrics, container metrics, and logs
-- **Data Forwarding**: Pushes metrics to Prometheus, logs to Loki
-- **Self-contained**: Single agent handles all data collection
+### Alloy Agents
+- `docker-compose.yml` - Alloy agent
+- `alloy-config.yml` - Log and metrics collection
+- Set `HOSTNAME` environment variable for each host
 
-## 🌐 Network Requirements
+## 📁 File Structure
 
-- **Central Server**: Exposes ports for web UI and data reception
-- **Remote Agents**: Push data to central Prometheus and Loki
-- **Data Flow**: Agents → Prometheus (port 9090), Agents → Loki (port 3100)
-- **Firewall**: Allow outbound connections from agents to central server
+```
+grafana/
+├── grafana-central/         # Central monitoring server
+│   ├── docker-compose.yml    # Grafana + Loki + Prometheus
+│   ├── datasources.yml       # Auto-configure Grafana datasources
+│   └── prometheus.yml        # Prometheus configuration
+├── grafana-agents/           # Alloy agents for each Docker host
+│   ├── docker-compose.yml    # Alloy agent
+│   └── alloy-config.yml      # Log and metrics collection
+└── README.md                 # This guide
+```
 
-## 📈 Scaling
+## 🛠️ Management
 
-1. **Add Agents**: Copy `remote-agents/` to new servers
-2. **Update Discovery**: Add agent details to `central-server/alloy-config.yml`
-3. **Monitor**: Use Grafana to monitor new agents
+**Start Grafana Central:**
+```bash
+cd grafana-central && docker-compose up -d
+```
 
-## 🔒 Security Considerations
+**Start Alloy Agent:**
+```bash
+cd grafana-agents && HOSTNAME=my-host docker-compose up -d
+```
 
-- Change default passwords
-- Use HTTPS in production
-- Implement network segmentation
-- Regular security updates
+**Stop Services:**
+```bash
+docker-compose down
+```
 
-## 📚 Documentation
+**View Logs:**
+```bash
+docker-compose logs -f
+```
 
-- [Central Server README](central-server/README.md)
-- [Remote Agents README](remote-agents/README.md)
-- [Grafana Alloy Documentation](https://grafana.com/docs/alloy/latest/)
+## 🔍 Troubleshooting
 
-## 🤝 Contributing
+**Check if agents are connected:**
+```bash
+curl http://localhost:3100/loki/api/v1/labels
+```
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+**View agent status:**
+```bash
+curl http://localhost:12345/api/v0/component/
+```
 
-## 📄 License
+**Check network connectivity:**
+```bash
+docker network ls | grep observability
+```
 
-This project is licensed under the MIT License.
+## 📈 Multi-Host Setup
+
+1. Deploy Grafana Central on monitoring host
+2. Deploy Alloy agents on each Docker host with unique `HOSTNAME`
+3. Use Grafana to filter logs by host, container, or content
+4. Create dashboards for different teams/environments
+
+## 🏷️ Available Labels
+
+- `job` - "docker" or "system"
+- `host` - Host identifier
+- `service_name` - Container/service name
+- `stream` - "stdout" or "stderr"
+- `log_type` - "container" or "system"
+
+## 🎯 Benefits
+
+- **Centralized Monitoring**: Single Grafana instance monitors all hosts
+- **Lightweight Agents**: Alloy agents have minimal resource footprint
+- **Easy Deployment**: Simple Docker Compose setup
+- **Multi-Host Support**: Scale to monitor unlimited hosts
+- **Real-time Logs**: Stream logs from all containers in real-time
+- **Flexible Filtering**: Filter by host, container, or content

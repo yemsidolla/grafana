@@ -1,0 +1,18 @@
+{
+	"ulid": "01K8599BC2C42DSA5A9AQE5AX1",
+	"minTime": 1761103305327,
+	"maxTime": 1761105600000,
+	"stats": {
+		"numSamples": 531755,
+		"numFloatSamples": 531755,
+		"numSeries": 4974,
+		"numChunks": 5009
+	},
+	"compaction": {
+		"level": 1,
+		"sources": [
+			"01K8599BC2C42DSA5A9AQE5AX1"
+		]
+	},
+	"version": 1
+}

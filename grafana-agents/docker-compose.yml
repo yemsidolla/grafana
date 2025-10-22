@@ -1,0 +1,27 @@
+services:
+  # Grafana Alloy - Agent Data Collection and Forwarding
+  grafana-alloy:
+    image: grafana/alloy:latest
+    container_name: grafana-alloy-agent
+    restart: always
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./alloy-config.yml:/etc/alloy/config.alloy
+      - /var/log:/var/log:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+    environment:
+      - LOKI_URL=http://loki:3100
+      - PROMETHEUS_URL=http://prometheus:9090
+      - HOSTNAME=${HOSTNAME:-unknown}
+    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "/etc/alloy/config.alloy"]
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    name: observability
+    external: true
