@@ -13,6 +13,10 @@ prometheus-data/
 loki-data/
 alloy-data/
 
+grafana-central/loki_data/
+grafana-central/prometheus_data/
+grafana-central/grafana_data/
+
 # Logs
 *.log
 logs/
