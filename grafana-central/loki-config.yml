@@ -43,6 +43,8 @@ limits_config:
   ingestion_burst_size_mb: 20
   # Increase the retention period
   retention_period: 8766h
+  # Disable structured metadata to avoid schema issues
+  allow_structured_metadata: false
 
 # Increase the ingester limits
 ingester:
@@ -58,3 +60,4 @@ compactor:
   retention_enabled: true
   retention_delete_delay: 2h
   retention_delete_worker_count: 150
+  delete_request_store: filesystem
