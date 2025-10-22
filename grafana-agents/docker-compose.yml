@@ -14,9 +14,9 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
     environment:
-      - LOKI_URL=http://loki:3100
-      - PROMETHEUS_URL=http://prometheus:9090
-      - HOSTNAME=${HOSTNAME:-unknown}
+      - LOKI_URL=${LOKI_URL}
+      - PROMETHEUS_URL=${PROMETHEUS_URL}
+      - HOSTNAME=${HOSTNAME}
     command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "/etc/alloy/config.alloy"]
     networks:
       - monitoring
