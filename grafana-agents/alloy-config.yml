@@ -25,12 +25,6 @@
 
 
 
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-constants {
-  hostname = env("HOSTNAME")
-}
 
 
 
@@ -58,7 +52,7 @@ discovery.relabel "cadvisor_targets" {
 
   rule {
     target_label = "instance"
-    replacement  = constants.hostname
+    replacement  = env("HOSTNAME")
   }
 }
 
@@ -103,7 +97,7 @@ discovery.relabel "logs_integrations_docker" {
 
   rule {
     target_label = "instance"
-    replacement  = constants.hostname
+    replacement  = env("HOSTNAME")
   }
 }
 
