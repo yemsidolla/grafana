@@ -1,0 +1,88 @@
+# Grafana Alerting Configuration
+# This file configures alerting rules and notification channels
+
+apiVersion: 1
+
+# Alert Rules
+alert_rules:
+  - name: "Docker Container Monitoring"
+    interval: 30s
+    rules:
+      # High CPU Usage Alert
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+          service: docker
+        annotations:
+          summary: "High CPU usage detected"
+          description: "Container {{ $labels.name }} on {{ $labels.instance }} has CPU usage above 80% for more than 2 minutes"
+          runbook_url: "https://docs.example.com/runbooks/high-cpu"
+
+      # High Memory Usage Alert
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+          service: docker
+        annotations:
+          summary: "High memory usage detected"
+          description: "Container {{ $labels.name }} on {{ $labels.instance }} has memory usage above 90% for more than 2 minutes"
+          runbook_url: "https://docs.example.com/runbooks/high-memory"
+
+      # Container Down Alert
+      - alert: ContainerDown
+        expr: up{job="integrations/docker"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: docker
+        annotations:
+          summary: "Container is down"
+          description: "Container {{ $labels.name }} on {{ $labels.instance }} has been down for more than 1 minute"
+          runbook_url: "https://docs.example.com/runbooks/container-down"
+
+      # Disk Space Alert
+      - alert: HighDiskUsage
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 10
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High disk usage detected"
+          description: "Disk usage on {{ $labels.instance }} is above 90% for more than 5 minutes"
+          runbook_url: "https://docs.example.com/runbooks/high-disk-usage"
+
+      # Log Error Rate Alert
+      - alert: HighErrorRate
+        expr: rate(loki_log_entries_total{level="ERROR"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          service: logging
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate on {{ $labels.instance }} is above 10 errors per second for more than 2 minutes"
+          runbook_url: "https://docs.example.com/runbooks/high-error-rate"
+
+# Notification Channels
+notifiers:
+  - name: "email-alerts"
+    type: "email"
+    settings:
+      addresses: "${SMTP_TO_ADDRESSES}"
+      subject: "[Grafana Alert] {{ .GroupLabels.alertname }}"
+      message: |
+        {{ range .Alerts }}
+        Alert: {{ .Annotations.summary }}
+        Description: {{ .Annotations.description }}
+        Severity: {{ .Labels.severity }}
+        Instance: {{ .Labels.instance }}
+        Time: {{ .StartsAt }}
+        {{ if .Annotations.runbook_url }}
+        Runbook: {{ .Annotations.runbook_url }}
+        {{ end }}
+        {{ end }}
