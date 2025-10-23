@@ -56,7 +56,7 @@ services:
       - ./grafana_data:/var/lib/grafana
       - ./datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
 #      - ./alerting.yml:/etc/grafana/provisioning/alerting/alerting.yml:ro
-      - ./notification-templates.yml:/etc/grafana/provisioning/notifiers/notification-templates.yml:ro
+#      - ./notification-templates.yml:/etc/grafana/provisioning/notifiers/notification-templates.yml:ro
     networks:
       - monitoring
     depends_on:
