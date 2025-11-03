@@ -42,6 +42,10 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_SERVER_ROOT_URL=${GF_SERVER_ROOT_URL:-https://grafana.bongloy.asia/}
+      - GF_SERVER_DOMAIN=${GF_SERVER_DOMAIN:-grafana.bongloy.asia}
+      - GF_SERVER_PROTOCOL=${GF_SERVER_PROTOCOL:-https}
+      - GF_SERVER_HTTP_PORT=${GF_SERVER_HTTP_PORT:-3000}
       # SMTP Configuration
       - GF_SMTP_ENABLED=true
       - GF_SMTP_HOST=${SMTP_HOST:-smtp.gmail.com:587}
