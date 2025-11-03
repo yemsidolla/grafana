@@ -58,6 +58,7 @@ services:
     volumes:
       - ./grafana_data:/var/lib/grafana
       - ./datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./grafana.ini:/etc/grafana/grafana.ini
 #      - ./alerting.yml:/etc/grafana/provisioning/alerting/alerting.yml:ro
 #      - ./notification-templates.yml:/etc/grafana/provisioning/notifiers/notification-templates.yml:ro
     networks:
