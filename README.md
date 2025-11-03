@@ -21,7 +21,20 @@ docker-compose up -d
 - Prometheus: http://localhost:9090
 - Loki: http://localhost:3100
 
-### 2. Deploy Alloy Agents
+### 2. Configure SMTP for Email Notifications (Optional)
+
+```bash
+# Copy the SMTP configuration template
+cp smtp.env.example .env
+
+# Edit the .env file with your SMTP details
+nano .env
+
+# Restart Grafana to apply SMTP settings
+docker-compose restart grafana
+```
+
+### 3. Deploy Alloy Agents
 
 On each Docker host you want to monitor:
 
@@ -70,11 +83,94 @@ sum by (host) (count_over_time({job="docker"}[5m]))
 - `docker-compose.yml` - Main services (Grafana + Loki + Prometheus)
 - `datasources.yml` - Auto-configure Grafana datasources
 - `prometheus.yml` - Prometheus configuration
+- `alerting.yml` - Alert rules and notification channels
+- `notification-templates.yml` - Custom email templates
 
 ### Alloy Agents
 - `docker-compose.yml` - Alloy agent
 - `alloy-config.yml` - Log and metrics collection
 - Set `HOSTNAME` environment variable for each host
+
+## 📧 SMTP Email Notifications Setup
+
+### 1. Configure SMTP Settings
+
+Create a `.env` file in the `grafana-central` directory:
+
+```bash
+cd grafana-central
+cp smtp.env.example .env
+nano .env
+```
+
+### 2. Common SMTP Providers
+
+#### Gmail Setup
+```bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password  # Use App Password, not regular password
+SMTP_FROM_ADDRESS=your-email@gmail.com
+SMTP_FROM_NAME=Grafana Monitoring
+SMTP_TO_ADDRESSES=admin@company.com,team@company.com
+```
+
+**Gmail App Password Setup:**
+1. Enable 2-Factor Authentication
+2. Go to Google Account Settings → Security → App passwords
+3. Generate an app password for "Grafana"
+4. Use this password in `SMTP_PASSWORD`
+
+#### Outlook/Hotmail Setup
+```bash
+SMTP_HOST=smtp-mail.outlook.com
+SMTP_PORT=587
+SMTP_USER=your-email@outlook.com
+SMTP_PASSWORD=your-password
+SMTP_FROM_ADDRESS=your-email@outlook.com
+SMTP_FROM_NAME=Grafana Monitoring
+```
+
+#### SendGrid Setup
+```bash
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASSWORD=your-sendgrid-api-key
+SMTP_FROM_ADDRESS=noreply@yourdomain.com
+SMTP_FROM_NAME=Grafana Monitoring
+```
+
+### 3. Test Email Configuration
+
+```bash
+# Restart Grafana to apply SMTP settings
+docker-compose restart grafana
+
+# Check Grafana logs for SMTP connection
+docker-compose logs grafana | grep -i smtp
+
+# Test email from Grafana UI
+# Go to http://localhost:3000 → Alerting → Contact Points → Test
+```
+
+### 4. Pre-configured Alert Rules
+
+The system includes these alert rules:
+- **High CPU Usage**: Container CPU > 80% for 2 minutes
+- **High Memory Usage**: Container memory > 90% for 2 minutes  
+- **Container Down**: Container not responding for 1 minute
+- **High Disk Usage**: Disk space < 10% for 5 minutes
+- **High Error Rate**: Error logs > 10/second for 2 minutes
+
+### 5. Custom Email Templates
+
+The system includes HTML email templates with:
+- Color-coded severity levels
+- Detailed alert information
+- Quick action links
+- Professional formatting
 
 ## 📁 File Structure
 

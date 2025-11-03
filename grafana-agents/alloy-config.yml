@@ -109,6 +109,8 @@ loki.source.docker "docker_logs" {
   forward_to = [loki.process.docker_processor.receiver]
 }
 
+
+
 // Process Docker logs with host identification and log level detection
 loki.process "docker_processor" {
   // Extract container name from Docker metadata
